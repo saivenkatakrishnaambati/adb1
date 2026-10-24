@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sequential CSV Dialer</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+        }
+        input[type="file"] {
+            margin-bottom: 20px;
+            width: 100%;
+        }
+        .number-display {
+            font-size: 2.2rem;
+            font-weight: bold;
+            margin: 15px 0;
+            color: #1a1a1a;
+            word-break: break-all;
+        }
+        .status {
+            font-size: 0.95rem;
+            color: #555;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            box-sizing: border-box;
+            margin-top: 15px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Sequential CSV Dialer</h2>
+        <p>Upload your CSV to queue numbers in order:</p>
+        
+        <!-- CSV File Upload -->
+        <input type="file" id="csvFile" accept=".csv">
+
+        <!-- Active Queue Section -->
+        <div id="dialerSection" class="hidden">
+            <div id="status" class="status">Progress: 0 / 0</div>
+            <div id="currentNumber" class="number-display">--</div>
+            
+            <!-- Dynamic link sending phone app straight to the current line item -->
+            <a id="dialBtn" href="#" class="btn" onclick="proceedToNext()">Call Next in Order</a>
+        </div>
+    </div>
+
+    <script>
+        let phoneQueue = [];
+        let currentIndex = 0;
+
+        document.getElementById('csvFile').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                parseCSVToQueue(e.target.result);
+            };
+            reader.readAsText(file);
+        });
+
+        function parseCSVToQueue(text) {
+            const lines = text.split(/\r\n|\n/);
+            phoneQueue = [];
+
+            // Read line by line sequentially
+            for (let line of lines) {
+                // Split columns by comma
+                const columns = line.split(',');
+                for (let col of columns) {
+                    // Strip quotes and extra spaces
+                    let cleaned = col.replace(/['"]+/g, '').trim();
+                    // Keep items that resemble phone numbers (at least 5 digits)
+                    if (cleaned && /\d{5,}/.test(cleaned)) {
+                        phoneQueue.push(cleaned);
+                    }
+                }
+            }
+
+            if (phoneQueue.length > 0) {
+                currentIndex = 0; // Start at the very beginning of the CSV
+                document.getElementById('dialerSection').classList.remove('hidden');
+                displayCurrentQueueItem();
+            } else {
+                alert("No valid phone numbers found in this CSV.");
+            }
+        }
+
+        function displayCurrentQueueItem() {
+            const display = document.getElementById('currentNumber');
+            const status = document.getElementById('status');
+            const btn = document.getElementById('dialBtn');
+
+            if (currentIndex < phoneQueue.length) {
+                let num = phoneQueue[currentIndex];
+                display.innerText = num;
+                btn.href = `tel:${num}`;
+                status.innerText = `Row ${currentIndex + 1} of ${phoneQueue.length}`;
+                btn.innerText = `Dial ${num}`;
+            } else {
+                display.innerText = "All Done!";
+                status.innerText = "Queue completed sequentially.";
+                btn.href = "#";
+                btn.classList.add('hidden');
+            }
+        }
+
+        function proceedToNext() {
+            // Advances the sequence index forward by 1 after tapping
+            currentIndex++;
+            setTimeout(() => {
+                displayCurrentQueueItem();
+            }, 400);
+        }
+    </script>
+
+</body>
+</html>
